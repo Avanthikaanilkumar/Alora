@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <div>
+    <a href="{% url 'addhall' %}"><button>Add</button></a>
+    <table>
+    <tr>
+        <th>Hall Name</th>
+        <th>Location</th>
+        <th>Price</th>
+    </tr>
+    {% for x in data %}
+    <tr>
+        <th>{{x.hall_name}}</th>
+        <th>{{x.location}}</th>
+        <th>{{x.price_per_day}}</th>
+    </tr>
+    {% endfor %}
+
+</table>
+</div>
+</body>
+</html>
