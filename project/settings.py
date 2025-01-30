@@ -119,6 +119,8 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'avanthikaanilkumar18@gmail.com'
 EMAIL_HOST_PASSWORD = 'nraw mmup fppy cvhe'
 DEFAULT_FROM_EMAIL = 'avanthikaanilkumar18@gmail.com'
+STRIPE_SECRET_KEY = 'sk_test_51QmqLJBsy8fmomml9vcMiqetQVeDIz2wfR8bdZE3WRGg3naBPRe6Wcuo2sBBkapVU34yixej2nPBPI8RdLkDv2m600AluSgVfP'
+STRIPE_PUBLISHABLE_KEY = 'pk_test_51QmqLJBsy8fmommlOJTxasX63CQcQDVYPtNnVTvwAcJbQqWJXQ4Vf7qU0nDSW157tB5AU9GnU1mIl2h3sSE6tLZM00JvtqpT5U'
 
 
 # Static files (CSS, JavaScript, Images)

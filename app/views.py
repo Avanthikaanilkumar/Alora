@@ -1,13 +1,39 @@
 from django.shortcuts import render,redirect
-from django.contrib.auth import authenticate,login
+from django.contrib.auth import authenticate,login,logout
+from django.contrib import auth
 
 from .models import *
 from django.http import HttpResponse
 import random
 from django.core.mail import send_mail
 from django.contrib import messages
+import stripe
+from django.conf import settings 
 
-# Create your views here.
+stripe.api_key = settings.STRIPE_SECRET_KEY
+
+def stripe_payments(request,id):
+    try:
+        data=Bookings.objects.get(id=id)
+        total_amount = data.total_payment
+
+        intent = stripe.PaymentIntent.create(
+            amount=int(total_amount*100),
+            currency="usd",
+            metadata={"data":data.id,"user_id":request.user.id},
+
+        )
+        context = {
+            'client_secret': intent.client_secret,
+            'STRIPE_PUBLISHABLE_KEY': settings.STRIPE_PUBLISHABLE_KEY,
+            'total_amount':total_amount,
+            'data':data,
+        }
+        return render(request,'stripe_payments.html',context)
+    except Bookings.DoesNotExist:
+        return redirect(user_view_booking)
+
+
 
 def send_otp(email):
     otp=random.randint(100000,999999)
@@ -128,12 +154,107 @@ def user_login(request):
         return render(request,'Login.html')
 def user_home(request):
     return render(request,'userhome.html')
-
+def logout_view(request):
+    auth.logout(request)
+    context = {'success_message': 'You have been logged out successfully.'}
+    return redirect('user_login')
 
 def view_user(request):
     user=User.objects.get(id=request.user.id)
     val=User_details.objects.get(user_id=user.id)
     return render(request,'viewuser.html',{'data':val})
+def edit(request):
+    data=User.objects.get(id=request.user.id)
+    user=User_details.objects.get(user_id=data.id)
+    if request.method == 'POST':
+        user.user_id.first_name=request.POST['name']
+        user.user_id.email=request.POST['email']
+        user.phone_number=request.POST['phone_number']
+        user.gender=request.POST['gender']
+        user.address=request.POST['address']
+        user.user_id.save()
+        user.save()
+        return redirect('viewuser')
+    else:
+        return render(request,'edituser.html',{'data':user})
+    
+    
+def booking(request):
+    data=User.objects.get(id=request.user.id)
+    halls=Halls.objects.all()
+    foods=Food.objects.all()
+    decorations=Decoration.objects.all()
+    if request.method == 'POST':
+        eventdate=request.POST['date']
+        hall=request.POST['hall']
+        food=request.POST['f']
+        food_id=request.POST.get('food')
+        no_of_people=request.POST['people_num']
+        photography=request.POST['photography']
+        decoration=request.POST['decoration']
+        decoration_id=request.POST.get('decoration_model')
+        check_date=Bookings.objects.filter(hall_id=hall,event_date=eventdate).exists()
+        if check_date:
+            return HttpResponse('hall already booked!')
+        if food == "yes":
+            food=True
+        else:
+            food=False
+        if decoration == "yes":
+            decoration=True
+        else:
+            decoration=False
+        if no_of_people == "":
+            no_of_people=0
+        no_of_people=int(no_of_people)
+        hall_amount=0
+        food_amount=0
+        photography_amount=0
+        decoration_amount=0
+        t_amount=0
+        h=Halls.objects.get(id=hall)
+        hall_amount=h.price_per_day
+        f=None
+        d=None
+        if food_id:
+            f=Food.objects.get(id=food_id)
+            food_amount=no_of_people*f.food_price
+        if photography == 'yes':
+            photography_amount=10000
+        if decoration_id:
+            d=Decoration.objects.get(id=decoration_id)
+            decoration_amount=d.decoration_price
+        t_amount=hall_amount+photography_amount+decoration_amount+food_amount
+        if food_id and decoration_id :
+            obj=Bookings.objects.create(event_date=eventdate,user_id=data,hall_id=h,photography=photography,food_value=food,food=f,no_of_people=no_of_people,decoration_value=decoration,decoration=d,photography_cost=photography_amount,total_payment=t_amount)
+            obj.save()
+        else:
+            obj=Bookings.objects.create(event_date=eventdate,user_id=data,hall_id=h,photography=photography,food_value=food,no_of_people=no_of_people,decoration_value=decoration,photography_cost=photography_amount,total_payment=t_amount)
+            obj.save()
+        return redirect(user_view_booking)
+    else:
+        return render(request,'booking.html',{'data':halls,'foods':foods,'decoration':decorations})
+    
+def user_view_booking(request):
+    user=User.objects.get(id=request.user.id)
+    booking=Bookings.objects.filter(user_id=user)
+    for i in booking:
+        print(i.event_status)
+    return render(request,'user_view_booking.html',{'x':booking})
+
+def logout_user(request):
+    logout(request)
+    return redirect('log')
+
+
+
+
+
+
+
+
+
+
    
 
 
@@ -192,6 +313,24 @@ def add_decoration(request):
         obj.save()
         return redirect(decoration_details)
     return render(request,'add_decoration.html')
+
+def admin_view_booking(request):
+    book=Bookings.objects.all()
+    return render(request,'admin_view_booking.html',{'data':book})
+
+def accept_reject_booking(request,id):
+    data=Bookings.objects.get(id=id)
+    if request.method == 'POST':
+        value=request.POST.get('Status')
+        if value == 'Accept':
+            data.event_status='Accept'
+        elif value == 'Reject':
+            data.event_status='Reject'
+        data.save()
+        return redirect(admin_view_booking)
+    return redirect(admin_view_booking)
+
+
 
 
 
